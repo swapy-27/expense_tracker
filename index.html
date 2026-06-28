@@ -522,7 +522,16 @@ function setPeriod(p) {
   period = p;
   document.querySelectorAll(".period-tab").forEach(t => t.classList.remove("active"));
   document.querySelector(`.period-tab[onclick*="${p}"]`).classList.add("active");
+  updateStatusText();
   render();
+}
+
+function updateStatusText() {
+  if (!allData.length) return;
+  const visible = filterData().length;
+  const periodLabel = period === "today" ? "today" : period;
+  document.getElementById("status-text").textContent =
+    `${visible} in ${periodLabel}${visible !== allData.length ? ` · ${allData.length} total` : ""} · updated ${new Date().toLocaleTimeString()}`;
 }
 
 function getDateRange() {
@@ -539,11 +548,18 @@ function getDateRange() {
   return { from, to: now };
 }
 
+function parseLocalDate(dateStr) {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  const d = new Date(dateStr);
+  return isNaN(d) ? null : d;
+}
+
 function filterData() {
   const { from, to } = getDateRange();
   return allData.filter(r => {
-    const d = new Date(r.date);
-    return d >= from && d <= to;
+    const d = parseLocalDate(r.date);
+    return d && d >= from && d <= to;
   });
 }
 
@@ -567,7 +583,7 @@ async function loadData() {
     if (!res.ok) throw new Error("Sheet not found or not public");
     const csv = await res.text();
     allData = parseCSV(csv);
-    document.getElementById("status-text").textContent = `${allData.length} transactions · updated ${new Date().toLocaleTimeString()}`;
+    updateStatusText();
     render();
   } catch (e) {
     document.getElementById("app").innerHTML = `
