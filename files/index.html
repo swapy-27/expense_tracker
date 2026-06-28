@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: #252532;
+    --accent: #7c6aff;
+    --accent2: #ff6a9b;
+    --accent3: #6affda;
+    --text: #e8e8f0;
+    --text-muted: #6b6b85;
+    --food: #ff6a9b;
+    --travel: #6affda;
+    --shopping: #ffd06a;
+    --entertainment: #7c6aff;
+    --health: #6aff9b;
+    --bills: #ff9b6a;
+    --groceries: #6ab8ff;
+    --other: #b46aff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 0 36px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    margin-top: 2px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .period-tabs {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 2px;
+  }
+
+  .period-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    border: none;
+    background: none;
+  }
+
+  .period-tab.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .refresh-btn {
+    width: 36px; height: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    color: var(--text-muted);
+  }
+
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-card.hero {
+    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(255,106,155,0.08));
+    border-color: rgba(124,106,255,0.3);
+  }
+
+  .stat-card.hero::after {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, rgba(124,106,255,0.2), transparent 70%);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .stat-card.hero .stat-value { font-size: 44px; }
+
+  .stat-value .currency {
+    font-size: 0.5em;
+    font-weight: 400;
+    color: var(--text-muted);
+    vertical-align: super;
+    margin-right: 2px;
+  }
+
+  .stat-meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .stat-meta span { color: var(--accent3); font-weight: 600; }
+
+  /* Main grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Category bars */
+  .cat-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .cat-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 70px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cat-name {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .cat-bar-wrap {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .cat-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .cat-amount {
+    text-align: right;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Donut chart */
+  .chart-wrap {
+    position: relative;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-center {
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .chart-center-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .chart-center-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Transactions */
+  .tx-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .tx-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    gap: 12px;
+    transition: background 0.15s;
+    cursor: default;
+  }
+
+  .tx-item:hover { background: var(--surface2); }
+
+  .tx-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .tx-info { flex: 1; min-width: 0; }
+
+  .tx-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tx-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    margin-top: 1px;
+  }
+
+  .tx-amount {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  /* Daily chart */
+  .daily-card { margin-bottom: 0; }
+
+  .daily-wrap { height: 140px; }
+
+  /* Bottom row */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    gap: 16px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Empty */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+  /* Config banner */
+  .config-banner {
+    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(255,106,155,0.1));
+    border: 1px solid rgba(124,106,255,0.3);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .config-banner strong { color: var(--accent); }
+  .config-banner code {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .main-grid { grid-template-columns: 1fr; }
+    .bottom-row { grid-template-columns: 1fr; }
+    .stat-card.hero .stat-value { font-size: 36px; }
+  }
+
+  @media (max-width: 500px) {
+    .stats-row { grid-template-columns: 1fr; }
+    .period-tabs { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">💸</div>
+      <div>
+        <div class="logo-text">Spendly</div>
+        <div class="logo-sub">your money, mapped</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="period-tabs">
+        <button class="period-tab active" onclick="setPeriod('today')">Today</button>
+        <button class="period-tab" onclick="setPeriod('week')">Week</button>
+        <button class="period-tab" onclick="setPeriod('month')">Month</button>
+      </div>
+      <button class="refresh-btn" onclick="loadData()" title="Refresh">↻</button>
+    </div>
+  </header>
+
+  <div id="config-notice" class="config-banner" style="display:none">
+    ⚙️ <strong>Setup needed:</strong> Open this file and set <code>SHEET_ID</code> to your Google Sheet ID, then reload.
+    <br>The Sheet ID is in the URL: <code>docs.google.com/spreadsheets/d/<strong>SHEET_ID</strong>/edit</code>
+  </div>
+
+  <div id="app">
+    <div class="loading">
+      <div class="spinner"></div>
+      Loading your expenses…
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <span id="status-text">connecting to sheet…</span>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────
+const SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE";  // ← paste your Sheet ID
+const SHEET_TAB = "Expenses";
+// ───────────────────────────────────────────────────────────
+
+const CAT_COLORS = {
+  Food:          "#ff6a9b",
+  Travel:        "#6affda",
+  Shopping:      "#ffd06a",
+  Entertainment: "#7c6aff",
+  Health:        "#6aff9b",
+  Bills:         "#ff9b6a",
+  Groceries:     "#6ab8ff",
+  Other:         "#b46aff",
+};
+
+const CAT_EMOJI = {
+  Food:"🍔", Travel:"🚗", Shopping:"🛍️", Entertainment:"🎬",
+  Health:"💊", Bills:"⚡", Groceries:"🛒", Other:"📦",
+};
+
+let allData = [];
+let period = "today";
+let donutChart = null;
+let dailyChart = null;
+
+function setPeriod(p) {
+  period = p;
+  document.querySelectorAll(".period-tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(`.period-tab[onclick*="${p}"]`).classList.add("active");
+  render();
+}
+
+function getDateRange() {
+  const now = new Date();
+  const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (period === "today") {
+    return { from: startOfDay(now), to: now };
+  }
+  if (period === "week") {
+    const d = new Date(now); d.setDate(d.getDate() - 6);
+    return { from: startOfDay(d), to: now };
+  }
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { from, to: now };
+}
+
+function filterData() {
+  const { from, to } = getDateRange();
+  return allData.filter(r => {
+    const d = new Date(r.date);
+    return d >= from && d <= to;
+  });
+}
+
+async function loadData() {
+  if (SHEET_ID === "YOUR_GOOGLE_SHEET_ID_HERE") {
+    document.getElementById("config-notice").style.display = "block";
+    document.getElementById("app").innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">⚙️</div>
+        Set your <strong>SHEET_ID</strong> in this file to connect your data.
+      </div>`;
+    document.getElementById("status-text").textContent = "not configured";
+    return;
+  }
+
+  document.getElementById("status-text").textContent = "fetching data…";
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Sheet not found or not public");
+    const csv = await res.text();
+    allData = parseCSV(csv);
+    document.getElementById("status-text").textContent = `${allData.length} transactions · updated ${new Date().toLocaleTimeString()}`;
+    render();
+  } catch (e) {
+    document.getElementById("app").innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">❌</div>
+        Couldn't load data.<br>
+        Make sure your Google Sheet is set to <strong>"Anyone with link can view"</strong>.
+      </div>`;
+    document.getElementById("status-text").textContent = "error loading data";
+  }
+}
+
+function parseCSV(csv) {
+  const lines = csv.trim().split("\n").slice(1); // skip header
+  return lines.map(line => {
+    const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g) || [];
+    const clean = cols.map(c => c.replace(/^"|"$/g, "").trim());
+    return {
+      date: clean[0] || "",
+      time: clean[1] || "",
+      name: clean[2] || "",
+      amount: parseFloat(clean[3]) || 0,
+      category: clean[4] || "Other",
+    };
+  }).filter(r => r.date && r.amount > 0);
+}
+
+function render() {
+  const data = filterData();
+  const total = data.reduce((s, r) => s + r.amount, 0);
+  const count = data.length;
+
+  // Category totals
+  const byCat = {};
+  data.forEach(r => { byCat[r.category] = (byCat[r.category] || 0) + r.amount; });
+  const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+
+  // Daily totals (last 7 or 30 days for week/month, hours for today)
+  const dailyMap = {};
+  data.forEach(r => {
+    const key = period === "today" ? (r.time.split(":")[0] + ":00") : r.date;
+    dailyMap[key] = (dailyMap[key] || 0) + r.amount;
+  });
+
+  const html = `
+    <div class="stats-row">
+      <div class="stat-card hero">
+        <div class="stat-label">Total Spent</div>
+        <div class="stat-value"><span class="currency">₹</span>${total.toLocaleString("en-IN")}</div>
+        <div class="stat-meta"><span>${count}</span> transaction${count !== 1 ? "s" : ""}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg / txn</div>
+        <div class="stat-value"><span class="currency">₹</span>${count ? Math.round(total/count).toLocaleString("en-IN") : "0"}</div>
+        <div class="stat-meta">per expense</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Category</div>
+        <div class="stat-value" style="font-size:28px">${catEntries[0] ? CAT_EMOJI[catEntries[0][0]] || "📦" : "–"}</div>
+        <div class="stat-meta">${catEntries[0] ? catEntries[0][0] : "none yet"}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Categories</div>
+        <div class="stat-value" style="font-size:36px">${catEntries.length}</div>
+        <div class="stat-meta">active</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-title">Spending by Category</div>
+        ${catEntries.length === 0 ? '<div class="empty"><div class="empty-icon">💸</div>No expenses yet.<br>Send a message to your Telegram bot!</div>' : `
+        <div class="cat-list">
+          ${catEntries.map(([cat, amt]) => `
+            <div class="cat-item">
+              <div class="cat-name">
+                <div class="cat-dot" style="background:${CAT_COLORS[cat] || '#888'}"></div>
+                ${cat}
+              </div>
+              <div class="cat-bar-wrap">
+                <div class="cat-bar" style="width:${(amt/total*100).toFixed(1)}%;background:${CAT_COLORS[cat] || '#888'}"></div>
+              </div>
+              <div class="cat-amount" style="color:${CAT_COLORS[cat] || '#888'}">₹${amt.toLocaleString("en-IN")}</div>
+            </div>
+          `).join("")}
+        </div>`}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Breakdown</div>
+        <div class="chart-wrap">
+          <canvas id="donutChart" width="220" height="220"></canvas>
+          <div class="chart-center">
+            <div class="chart-center-value">₹${(total/1000).toFixed(1)}k</div>
+            <div class="chart-center-label">total</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="card">
+        <div class="card-title">Recent Transactions</div>
+        ${data.length === 0 ? '<div class="empty"><div class="empty-icon">📋</div>No transactions in this period.</div>' : `
+        <div class="tx-list">
+          ${[...data].reverse().slice(0, 10).map(r => `
+            <div class="tx-item">
+              <div class="tx-icon" style="background:${(CAT_COLORS[r.category] || '#888')}22">
+                ${CAT_EMOJI[r.category] || "📦"}
+              </div>
+              <div class="tx-info">
+                <div class="tx-name">${r.name}</div>
+                <div class="tx-meta">${r.time} · ${r.category}</div>
+              </div>
+              <div class="tx-amount" style="color:${CAT_COLORS[r.category] || '#888'}">₹${r.amount.toLocaleString("en-IN")}</div>
+            </div>
+          `).join("")}
+        </div>`}
+      </div>
+
+      <div class="card daily-card">
+        <div class="card-title">${period === "today" ? "By Hour" : period === "week" ? "Daily Spend" : "Monthly Trend"}</div>
+        <div class="daily-wrap">
+          <canvas id="dailyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("app").innerHTML = html;
+  renderDonut(catEntries, total);
+  renderDaily(dailyMap);
+}
+
+function renderDonut(catEntries, total) {
+  const ctx = document.getElementById("donutChart");
+  if (!ctx) return;
+  if (donutChart) donutChart.destroy();
+
+  if (catEntries.length === 0) return;
+
+  donutChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: catEntries.map(([c]) => c),
+      datasets: [{
+        data: catEntries.map(([, v]) => v),
+        backgroundColor: catEntries.map(([c]) => CAT_COLORS[c] || "#888"),
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      cutout: "72%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ₹${ctx.raw.toLocaleString("en-IN")} (${(ctx.raw/total*100).toFixed(0)}%)`
+          },
+          backgroundColor: "#1c1c26",
+          titleColor: "#e8e8f0",
+          bodyColor: "#a0a0bb",
+          borderColor: "#252532",
+          borderWidth: 1,
+          padding: 10,
+        }
+      },
+    }
+  });
+}
+
+function renderDaily(dailyMap) {
+  const ctx = document.getElementById("dailyChart");
+  if (!ctx) return;
+  if (dailyChart) dailyChart.destroy();
+
+  const labels = Object.keys(dailyMap).sort();
+  const values = labels.map(k => dailyMap[k]);
+
+  if (labels.length === 0) return;
+
+  dailyChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels.map(l => period === "today" ? l : l.slice(5)),
+      datasets: [{
+        data: values,
+        backgroundColor: "rgba(124,106,255,0.6)",
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: "#1c1c26",
+        titleColor: "#e8e8f0",
+        bodyColor: "#a0a0bb",
+        borderColor: "#252532",
+        borderWidth: 1,
+        callbacks: { label: ctx => ` ₹${ctx.raw.toLocaleString("en-IN")}` }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#6b6b85", font: { family: "Space Mono", size: 10 } } },
+        y: { grid: { color: "#1c1c26" }, ticks: { color: "#6b6b85", font: { family: "Space Mono", size: 10 },
+          callback: v => "₹" + (v >= 1000 ? (v/1000).toFixed(0)+"k" : v) } }
+      }
+    }
+  });
+}
+
+// Auto-refresh every 2 minutes
+loadData();
+setInterval(loadData, 120000);
+</script>
+</body>
+</html>
